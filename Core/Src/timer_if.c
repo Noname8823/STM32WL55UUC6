@@ -245,4 +245,3 @@ uint32_t TIMER_IF_BkUp_Read_SubSeconds(void)
 /* USER CODE BEGIN PrFD */
 
 /* USER CODE END PrFD */
-

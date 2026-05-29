@@ -23,7 +23,7 @@
 #include "sys_app.h"
 #include "subghz_phy_app.h"
 #include "radio.h"
-#include "app_version.h"
+#include "cmsis_os.h"
 
 /* USER CODE BEGIN Includes */
 
@@ -38,7 +38,6 @@
 /* USER CODE END EV */
 
 /* Private typedef -----------------------------------------------------------*/
-
 /* USER CODE BEGIN PTD */
 
 #define REGION_AS923
@@ -120,6 +119,7 @@
 /* Private variables ---------------------------------------------------------*/
 /* Radio events function pointer */
 static RadioEvents_t RadioEvents;
+
 /* USER CODE BEGIN PV */
 
 static PacketSendCallback packetSendCallback;
@@ -243,7 +243,6 @@ void SubghzApp_RX(uint16_t timeout) {
 /* USER CODE END EF */
 
 /* Private functions ---------------------------------------------------------*/
-
 static void OnTxDone(void)
 {
   /* USER CODE BEGIN OnTxDone */
@@ -333,4 +332,3 @@ static void OnRxError(void)
 
 /* USER CODE BEGIN PrFD */
 /* USER CODE END PrFD */
-

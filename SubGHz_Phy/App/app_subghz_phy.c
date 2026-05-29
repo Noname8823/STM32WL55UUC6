@@ -22,8 +22,7 @@
 #include "app_subghz_phy.h"
 #include "subghz_phy_app.h"
 #include "sys_app.h"
-#include "cmsis_os.h"
-
+#include "cmsis_os2.h"
 /* USER CODE BEGIN Includes */
 
 #include "stdio.h"
@@ -84,6 +83,9 @@ void MX_SubGHz_Phy_Init(void)
 
   /* USER CODE END MX_SubGHz_Phy_Init_1 */
   SystemApp_Init();
+  /* USER CODE BEGIN MX_SubGHz_Phy_Init_1_1 */
+
+  /* USER CODE END MX_SubGHz_Phy_Init_1_1 */
   SubghzApp_Init();
   /* USER CODE BEGIN MX_SubGHz_Phy_Init_2 */
 

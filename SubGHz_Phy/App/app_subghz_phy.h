@@ -21,6 +21,8 @@
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __APP_SUBGHZ_PHY_H__
 #define __APP_SUBGHZ_PHY_H__
+#include "stdint.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,7 +55,7 @@ extern "C" {
 
 /* USER CODE END EM */
 
-/* Exported functions prototypes ---------------------------------------------*/
+/* Exported Functions Prototypes ---------------------------------------------*/
 /**
   * @brief  Init SubGHz Radio Application
   */

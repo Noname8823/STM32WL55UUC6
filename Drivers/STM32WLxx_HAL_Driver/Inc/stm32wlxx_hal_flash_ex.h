@@ -6,13 +6,12 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
-  * All rights reserved.</center></h2>
+  * Copyright (c) 2020 STMicroelectronics.
+  * All rights reserved.
   *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                       opensource.org/licenses/BSD-3-Clause
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
   *
   ******************************************************************************
   */
@@ -72,7 +71,7 @@ extern "C" {
 /** @addtogroup FLASHEx_Exported_Functions_Group1
   * @{
   */
-HAL_StatusTypeDef HAL_FLASHEx_Erase(FLASH_EraseInitTypeDef *pEraseInit, uint32_t *PageError);
+HAL_StatusTypeDef HAL_FLASHEx_Erase(const FLASH_EraseInitTypeDef *pEraseInit, uint32_t *PageError);
 HAL_StatusTypeDef HAL_FLASHEx_Erase_IT(FLASH_EraseInitTypeDef *pEraseInit);
 uint32_t          HAL_FLASHEx_FlashEmptyCheck(void);
 void              HAL_FLASHEx_ForceFlashEmpty(uint32_t FlashEmpty);
@@ -100,9 +99,11 @@ uint32_t          HAL_FLASHEx_GetPrivMode(void);
 /** @defgroup FLASHEx_Private_Macros FLASHEx Private Macros
   *  @{
   */
-#define IS_FLASH_EMPTY_CHECK(__VALUE__)         (((__VALUE__) == FLASH_PROG_EMPTY) || ((__VALUE__) == FLASH_PROG_NOT_EMPTY))
+#define IS_FLASH_EMPTY_CHECK(__VALUE__)         (((__VALUE__) == FLASH_PROG_EMPTY) ||\
+                                                 ((__VALUE__) == FLASH_PROG_NOT_EMPTY))
 
-#define IS_FLASH_CFGPRIVMODE(__VALUE__)         (((__VALUE__) == FLASH_PRIV_GRANTED) || ((__VALUE__) == FLASH_PRIV_DENIED))
+#define IS_FLASH_CFGPRIVMODE(__VALUE__)         (((__VALUE__) == FLASH_PRIV_GRANTED) ||\
+                                                 ((__VALUE__) == FLASH_PRIV_DENIED))
 /**
   * @}
   */
@@ -130,4 +131,3 @@ void              FLASH_PageErase(uint32_t Page);
 
 #endif /* STM32WLxx_HAL_FLASH_EX_H */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -51,39 +51,32 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
+void MX_SUBGHZ_Init(void);
 
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define SPI1_SCK_Pin GPIO_PIN_3
-#define SPI1_SCK_GPIO_Port GPIOB
-#define SPI1_MISO_Pin GPIO_PIN_4
-#define SPI1_MISO_GPIO_Port GPIOB
-#define SPI1_MOSI_Pin GPIO_PIN_5
-#define SPI1_MOSI_GPIO_Port GPIOB
-#define GPIO_1_Pin GPIO_PIN_8
-#define GPIO_1_GPIO_Port GPIOB
-#define GPIO_0_Pin GPIO_PIN_0
-#define GPIO_0_GPIO_Port GPIOA
-#define GPIO_3_Pin GPIO_PIN_1
-#define GPIO_3_GPIO_Port GPIOA
-#define RF_SWITCH_VDD_Pin GPIO_PIN_5
-#define RF_SWITCH_VDD_GPIO_Port GPIOA
-#define RF_SWITCH_CTRL_Pin GPIO_PIN_0
-#define RF_SWITCH_CTRL_GPIO_Port GPIOB
-#define ADC_0_Pin GPIO_PIN_2
-#define ADC_0_GPIO_Port GPIOB
-#define WKUP_Pin GPIO_PIN_12
-#define WKUP_GPIO_Port GPIOB
-#define ADC_1_Pin GPIO_PIN_10
-#define ADC_1_GPIO_Port GPIOA
-#define GPIO_2_Pin GPIO_PIN_13
-#define GPIO_2_GPIO_Port GPIOC
-#define SPI1_NSS_Pin GPIO_PIN_15
-#define SPI1_NSS_GPIO_Port GPIOA
-void   MX_SUBGHZ_Init(void);
+#define IN1_Pin GPIO_PIN_5
+#define IN1_GPIO_Port GPIOB
+#define IN2_Pin GPIO_PIN_6
+#define IN2_GPIO_Port GPIOB
+#define IN3_Pin GPIO_PIN_7
+#define IN3_GPIO_Port GPIOB
+#define IN4_Pin GPIO_PIN_8
+#define IN4_GPIO_Port GPIOB
+#define SW1_Pin GPIO_PIN_0
+#define SW1_GPIO_Port GPIOA
+#define SW2_Pin GPIO_PIN_1
+#define SW2_GPIO_Port GPIOA
+#define LED1_Pin GPIO_PIN_11
+#define LED1_GPIO_Port GPIOA
+#define LED2_Pin GPIO_PIN_12
+#define LED2_GPIO_Port GPIOA
+#define RF_MODE_Pin GPIO_PIN_13
+#define RF_MODE_GPIO_Port GPIOC
+
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

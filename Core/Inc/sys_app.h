@@ -77,4 +77,3 @@ void SystemApp_Init(void);
 #endif
 
 #endif /* __SYS_APP_H__ */
-

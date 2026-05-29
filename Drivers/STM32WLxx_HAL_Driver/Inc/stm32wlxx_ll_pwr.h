@@ -6,13 +6,12 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
-  * All rights reserved.</center></h2>
+  * Copyright (c) 2020 STMicroelectronics.
+  * All rights reserved.
   *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
   *
   ******************************************************************************
   */
@@ -114,7 +113,7 @@ extern "C" {
 #define LL_PWR_EXTSCR_C2DS                 PWR_EXTSCR_C2DS     /* CPU2 deepsleep mode */
 #define LL_PWR_SR2_C2BOOTS                 PWR_SR2_C2BOOTS     /* CPU2 boot request source information flag */
 #define LL_PWR_SR1_C2HF                    PWR_SR1_C2HF        /* CPU2 hold interrupt flag */
-#endif
+#endif /* DUAL_CORE */
 /**
   * @}
   */
@@ -1777,7 +1776,7 @@ __STATIC_INLINE uint32_t LL_PWR_C2_IsEnabledWakeUp_ILAC(void)
 {
   return ((READ_BIT(PWR->SECCFGR, PWR_SECCFGR_C2EWILA) == (PWR_SECCFGR_C2EWILA)) ? 1UL : 0UL);
 }
-#endif
+#endif /* DUAL_CORE */
 
 /**
   * @}
@@ -2095,7 +2094,7 @@ __STATIC_INLINE uint32_t LL_PWR_IsActiveFlag_C2BOOTS(void)
 {
   return ((READ_BIT(PWR->SR2, PWR_SR2_C2BOOTS) == (PWR_SR2_C2BOOTS)) ? 1UL : 0UL);
 }
-#endif
+#endif /* DUAL_CORE */
 
 /**
   * @brief  Get system Stop 0 or Stop 1 flag for CPU1
@@ -2187,7 +2186,7 @@ __STATIC_INLINE void LL_PWR_ClearFlag_C2H(void)
 {
   WRITE_REG(PWR->SCR, PWR_SCR_CC2HF);
 }
-#endif
+#endif /* DUAL_CORE */
 
 /**
   * @brief  Clear standby and stop flags for CPU1
@@ -2209,7 +2208,7 @@ __STATIC_INLINE void LL_PWR_ClearFlag_C2STOP_C2STB(void)
 {
   WRITE_REG(PWR->EXTSCR, PWR_EXTSCR_C2CSSF);
 }
-#endif
+#endif /* DUAL_CORE */
 
 /**
   * @}
@@ -2253,7 +2252,7 @@ __STATIC_INLINE uint32_t LL_PWR_IsEnabledIT_HoldCPU2(void)
 /**
   * @}
   */
-#endif
+#endif /* DUAL_CORE */
 
 #if defined(USE_FULL_LL_DRIVER)
 /** @defgroup PWR_LL_EF_Init De-initialization function
@@ -2273,7 +2272,7 @@ ErrorStatus LL_PWR_DeInit(void);
   * @}
   */
 
-#endif /* defined(PWR) */
+#endif /* PWR */
 
 /**
   * @}
@@ -2285,4 +2284,3 @@ ErrorStatus LL_PWR_DeInit(void);
 
 #endif /* __STM32WLxx_LL_PWR_H */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

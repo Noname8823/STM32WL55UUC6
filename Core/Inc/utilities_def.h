@@ -27,6 +27,7 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
+#include <stddef.h>
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
@@ -78,4 +79,3 @@ typedef enum
 #endif
 
 #endif /* __UTILITIES_DEF_H__ */
-

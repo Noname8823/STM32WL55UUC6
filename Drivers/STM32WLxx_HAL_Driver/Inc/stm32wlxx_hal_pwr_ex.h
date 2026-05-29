@@ -6,13 +6,12 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
-  * All rights reserved.</center></h2>
+  * Copyright (c) 2020 STMicroelectronics.
+  * All rights reserved.
   *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
   *
   ******************************************************************************
   */
@@ -80,7 +79,7 @@ typedef struct
 #define PWR_FLAG_EXTSCR_CLR_MASK ((PWR_EXTSCR_C1CSSF_Pos | PWR_EXTSCR_C2CSSF_Pos) << PWR_FLAG_EXTSCR_CLR_POS)  /* Bitfield for register PWR_EXTSCR clearable bits positions: mask of bitfield in flag literals */
 #else
 #define PWR_FLAG_EXTSCR_CLR_MASK ((PWR_EXTSCR_C1CSSF_Pos) << PWR_FLAG_EXTSCR_CLR_POS)  /* Bitfield for register PWR_EXTSCR clearable bits positions: mask of bitfield in flag literals */
-#endif
+#endif /* DUAL_CORE */
 /**
   * @}
   */
@@ -305,17 +304,17 @@ typedef struct
 #define PWR_FLAG_C2SB                       (PWR_FLAG_REG_EXTSCR | PWR_EXTSCR_C2SBF_Pos | (PWR_EXTSCR_C2CSSF_Pos << PWR_FLAG_EXTSCR_CLR_POS))    /*!< System Standby flag for CPU2 */
 #define PWR_FLAG_C2STOP2                    (PWR_FLAG_REG_EXTSCR | PWR_EXTSCR_C2STOP2F_Pos | (PWR_EXTSCR_C2CSSF_Pos << PWR_FLAG_EXTSCR_CLR_POS)) /*!< System Stop 2 flag for CPU2 */
 #define PWR_FLAG_C2STOP                     (PWR_FLAG_REG_EXTSCR | PWR_EXTSCR_C2STOPF_Pos | (PWR_EXTSCR_C2CSSF_Pos << PWR_FLAG_EXTSCR_CLR_POS))  /*!< System Stop 0 or Stop 1 flag for CPU2 */
-#endif
+#endif /* DUAL_CORE */
 
 #define PWR_FLAG_LPMODES                    (PWR_FLAG_SB)                       /*!< System flag encompassing all low-powers flags (Stop0, 1, 2 and Standby) for CPU1, used when clearing flags */
 #if defined(DUAL_CORE)
 #define PWR_FLAG_C2LPMODES                  (PWR_FLAG_C2SB)                     /*!< System flag encompassing all low-powers flags (Stop0, 1, 2 and Standby) for CPU2, used when clearing flags */
-#endif
+#endif /* DUAL_CORE */
 
 #define PWR_FLAG_C1DEEPSLEEP                (PWR_EXTSCR_C1DS_Pos | PWR_FLAG_REG_EXTSCR)     /*!< CPU1 DeepSleep Flag */
 #if defined(DUAL_CORE)
 #define PWR_FLAG_C2DEEPSLEEP                (PWR_EXTSCR_C2DS_Pos | PWR_FLAG_REG_EXTSCR)     /*!< CPU2 DeepSleep Flag */
-#endif
+#endif /* DUAL_CORE */
 /**
   * @}
   */
@@ -326,7 +325,7 @@ typedef struct
 #define PWR_CORE_CPU1                       (0x00000000UL)
 #if defined(DUAL_CORE)
 #define PWR_CORE_CPU2                       (0x00000001UL)
-#endif
+#endif /* DUAL_CORE */
 /**
   * @}
   */
@@ -345,8 +344,8 @@ typedef struct
 
 /* Exported macros -----------------------------------------------------------*/
 /** @defgroup PWREx_Exported_Macros PWR Extended Exported Macros
- * @{
- */
+  * @{
+  */
 
 /**
   * @brief Enable the PVM3 Extended Interrupt line.
@@ -356,7 +355,7 @@ typedef struct
 #define __HAL_PWR_PVM3_EXTI_ENABLE_IT()     LL_C2_EXTI_EnableIT_32_63(PWR_EXTI_LINE_PVM3)
 #else
 #define __HAL_PWR_PVM3_EXTI_ENABLE_IT()     LL_EXTI_EnableIT_32_63(PWR_EXTI_LINE_PVM3)
-#endif
+#endif /* CORE_CM0PLUS */
 
 /**
   * @brief Disable the PVM3 Extended Interrupt line.
@@ -366,7 +365,7 @@ typedef struct
 #define __HAL_PWR_PVM3_EXTI_DISABLE_IT()    LL_C2_EXTI_DisableIT_32_63(PWR_EXTI_LINE_PVM3)
 #else
 #define __HAL_PWR_PVM3_EXTI_DISABLE_IT()    LL_EXTI_DisableIT_32_63(PWR_EXTI_LINE_PVM3)
-#endif
+#endif /* CORE_CM0PLUS */
 
 /**
   * @brief Enable the PVM3 Event line.
@@ -376,7 +375,7 @@ typedef struct
 #define __HAL_PWR_PVM3_EXTI_ENABLE_EVENT()  LL_C2_EXTI_EnableEvent_32_63(PWR_EXTI_LINE_PVM3)
 #else
 #define __HAL_PWR_PVM3_EXTI_ENABLE_EVENT()  LL_EXTI_EnableEvent_32_63(PWR_EXTI_LINE_PVM3)
-#endif
+#endif /* CORE_CM0PLUS */
 
 /**
   * @brief Disable the PVM3 Event line.
@@ -386,7 +385,7 @@ typedef struct
 #define __HAL_PWR_PVM3_EXTI_DISABLE_EVENT()   LL_C2_EXTI_DisableEvent_32_63(PWR_EXTI_LINE_PVM3)
 #else
 #define __HAL_PWR_PVM3_EXTI_DISABLE_EVENT()   LL_EXTI_DisableEvent_32_63(PWR_EXTI_LINE_PVM3)
-#endif
+#endif /* CORE_CM0PLUS */
 
 /**
   * @brief Enable the PVM3 Extended Interrupt Rising Trigger.
@@ -542,11 +541,11 @@ typedef struct
 #define IS_PWR_CORE(__CPU__)  (((__CPU__) == PWR_CORE_CPU1) || ((__CPU__) == PWR_CORE_CPU2))
 #else
 #define IS_PWR_CORE(__CPU__)  (((__CPU__) == PWR_CORE_CPU1))
-#endif
+#endif /* DUAL_CORE */
 
 #if defined(DUAL_CORE)
 #define IS_PWR_CORE_HOLD_RELEASE(__CPU__)  ((__CPU__) == PWR_CORE_CPU2)
-#endif
+#endif /* DUAL_CORE */
 
 /**
   * @}
@@ -586,7 +585,7 @@ void              HAL_PWREx_ReleaseCore(uint32_t CPU);
 void              HAL_PWREx_EnableWakeUp_ILAC(void);
 void              HAL_PWREx_DisableWakeUp_ILAC(void);
 uint32_t          HAL_PWREx_IsEnabledWakeUp_ILAC(void);
-#endif
+#endif /* CORE_CM0PLUS */
 
 HAL_StatusTypeDef HAL_PWREx_EnableGPIOPullUp(uint32_t GPIO, uint32_t GPIONumber);
 HAL_StatusTypeDef HAL_PWREx_DisableGPIOPullUp(uint32_t GPIO, uint32_t GPIONumber);
@@ -609,7 +608,7 @@ void              HAL_PWREx_DisableBORPVD_ULP(void);
 void              HAL_PWREx_EnablePVM3(void);
 void              HAL_PWREx_DisablePVM3(void);
 
-HAL_StatusTypeDef HAL_PWREx_ConfigPVM(PWR_PVMTypeDef *sConfigPVM);
+HAL_StatusTypeDef HAL_PWREx_ConfigPVM(const PWR_PVMTypeDef *sConfigPVM);
 
 void              HAL_PWREx_SetRadioEOL(uint32_t RadioEOL);
 void              HAL_PWREx_SMPS_SetMode(uint32_t OperatingMode);
@@ -651,4 +650,3 @@ void              HAL_PWREx_PVM3Callback(void);
 
 #endif /* STM32WLxx_HAL_PWR_EX_H */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

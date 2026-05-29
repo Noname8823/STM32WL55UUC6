@@ -56,7 +56,6 @@
 
 /* External variables --------------------------------------------------------*/
 extern SUBGHZ_HandleTypeDef hsubghz;
-extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
 extern TIM_HandleTypeDef htim17;
 
@@ -177,20 +176,6 @@ void TIM17_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles USART1 Interrupt.
-  */
-void USART1_IRQHandler(void)
-{
-  /* USER CODE BEGIN USART1_IRQn 0 */
-
-  /* USER CODE END USART1_IRQn 0 */
-  HAL_UART_IRQHandler(&huart1);
-  /* USER CODE BEGIN USART1_IRQn 1 */
-
-  /* USER CODE END USART1_IRQn 1 */
-}
-
-/**
   * @brief This function handles USART2 Interrupt.
   */
 void USART2_IRQHandler(void)
@@ -221,4 +206,3 @@ void SUBGHZ_Radio_IRQHandler(void)
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */
-

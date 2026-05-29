@@ -3,6 +3,18 @@
   * @file    stm32wlxx_ll_system.h
   * @author  MCD Application Team
   * @brief   Header file of SYSTEM LL module.
+  *
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2020 STMicroelectronics.
+  * All rights reserved.
+  *
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
+  *
+  ******************************************************************************
   @verbatim
   ==============================================================================
                      ##### How to use this driver #####
@@ -16,17 +28,6 @@
       (+) Access to VREFBUF registers
 
   @endverbatim
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                       opensource.org/licenses/BSD-3-Clause
-  *
   ******************************************************************************
   */
 
@@ -61,8 +62,8 @@ extern "C" {
 #define LL_SYSCFG_EXTI_REGISTER_PINPOS_SHFT     16U   /*!< Define used to shift pin position in EXTICR register */
 
 /**
- * @brief VREFBUF VREF_SC0 & VREF_SC1 calibration values 
- */
+  * @brief VREFBUF VREF_SC0 & VREF_SC1 calibration values
+  */
 #define VREFBUF_SC0_CAL_ADDR   ((uint8_t*) (0x1FFF75F0UL)) /*!<  Address of VREFBUF trimming value for VRS=0,
                                                                  VREF_SC0 in STM32WL datasheet */
 #define VREFBUF_SC1_CAL_ADDR   ((uint8_t*) (0x1FFF7530UL)) /*!<  Address of VREFBUF trimming value for VRS=1,
@@ -80,8 +81,8 @@ extern "C" {
   */
 
 /** @defgroup SYSTEM_LL_EC_REMAP SYSCFG REMAP
-* @{
-*/
+  * @{
+  */
 #define LL_SYSCFG_REMAP_FLASH                   0x00000000U                                           /*!< Main Flash memory mapped at 0x00000000   */
 #define LL_SYSCFG_REMAP_SYSTEMFLASH             SYSCFG_MEMRMP_MEM_MODE_0                              /*!< System Flash memory mapped at 0x00000000 */
 #define LL_SYSCFG_REMAP_SRAM                    (SYSCFG_MEMRMP_MEM_MODE_1 | SYSCFG_MEMRMP_MEM_MODE_0) /*!< SRAM1 mapped at 0x00000000               */
@@ -590,7 +591,8 @@ __STATIC_INLINE uint32_t LL_SYSCFG_GetEXTISource(uint32_t Line)
 #if defined(CORE_CM0PLUS)
   return (uint32_t)(READ_BIT(SYSCFG->EXTICR[Line & 0x03U], (SYSCFG_EXTICR1_EXTI0 << ((Line >> LL_SYSCFG_EXTI_REGISTER_PINPOS_SHFT) & 12UL))) >> ((Line >> LL_SYSCFG_EXTI_REGISTER_PINPOS_SHFT) & 12UL));
 #else
-  return (uint32_t)(READ_BIT(SYSCFG->EXTICR[Line & 0x03U], ((Line >> LL_SYSCFG_EXTI_REGISTER_PINPOS_SHFT)) >> ((POSITION_VAL(Line >> LL_SYSCFG_EXTI_REGISTER_PINPOS_SHFT)) & 0x0000000FUL)));
+  return (uint32_t)(READ_BIT(SYSCFG->EXTICR[Line & 0x03U],
+                             (Line >> LL_SYSCFG_EXTI_REGISTER_PINPOS_SHFT)) >> POSITION_VAL(Line >> LL_SYSCFG_EXTI_REGISTER_PINPOS_SHFT));
 #endif
 }
 
@@ -1548,7 +1550,7 @@ __STATIC_INLINE uint32_t LL_VREFBUF_GetTrimming(void)
   * @brief  Set the trimming code for VREFBUF calibration (Tune the internal reference buffer voltage)
   * @note   Each VrefBuf voltage scale is calibrated in production for each device,
   *         data stored in flash memory.
-  *         Functions @ref LL_VREFBUF_SC0_GetCalibration and 
+  *         Functions @ref LL_VREFBUF_SC0_GetCalibration and
   *         @ref LL_VREFBUF_SC0_GetCalibration can be used to retrieve
   *         these calibration data.
   * @rmtoll VREFBUF_CCR  TRIM          LL_VREFBUF_SetTrimming
@@ -1923,5 +1925,3 @@ __STATIC_INLINE uint32_t LL_FLASH_GetSTCompanyID(void)
 #endif
 
 #endif /* STM32WLxx_LL_SYSTEM_H */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

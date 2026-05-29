@@ -16,6 +16,8 @@
  *
  ******************************************************************************
  */
+
+#include "stdint.h"
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
@@ -38,6 +40,17 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 
+/* USER CODE BEGIN FREERTOS_EC */
+#define CFG_VCOM_PROCESS_NAME                      "VCOM_PROCESS"
+#define CFG_VCOM_PROCESS_ATTR_BITS                 (0)
+#define CFG_VCOM_PROCESS_CB_MEM                    (0)
+#define CFG_VCOM_PROCESS_CB_SIZE                   (0)
+#define CFG_VCOM_PROCESS_STACK_MEM                 (0)
+#define CFG_VCOM_PROCESS_PRIORITY                  osPriorityNone
+#define CFG_VCOM_PROCESS_STACK_SIZE                1024
+
+/* USER CODE END FREERTOS_EC */
+
 /* USER CODE BEGIN EC */
 
 /* USER CODE END EC */
@@ -47,7 +60,7 @@ extern "C" {
 
 /* USER CODE END EV */
 
-/* Exported macro ------------------------------------------------------------*/
+/* Exported macros -----------------------------------------------------------*/
 /* USER CODE BEGIN EM */
 
 /* USER CODE END EM */

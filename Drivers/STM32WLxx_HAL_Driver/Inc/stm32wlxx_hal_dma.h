@@ -6,13 +6,12 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
-  * All rights reserved.</center></h2>
+  * Copyright (c) 2020 STMicroelectronics.
+  * All rights reserved.
   *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
   *
   ******************************************************************************
   */
@@ -495,7 +494,7 @@ typedef struct __DMA_HandleTypeDef
   * @retval The state of FLAG (SET or RESET).
   */
 #define __HAL_DMA_GET_FLAG(__HANDLE__, __FLAG__) (((uint32_t)((__HANDLE__)->Instance) > ((uint32_t)DMA1_Channel7))? \
- (DMA2->ISR & (__FLAG__)) : (DMA1->ISR & (__FLAG__)))
+                                                  (DMA2->ISR & (__FLAG__)) : (DMA1->ISR & (__FLAG__)))
 
 /**
   * @brief  Clear the DMA Channel pending flags.
@@ -510,7 +509,7 @@ typedef struct __DMA_HandleTypeDef
   * @retval None
   */
 #define __HAL_DMA_CLEAR_FLAG(__HANDLE__, __FLAG__) (((uint32_t)((__HANDLE__)->Instance) > ((uint32_t)DMA1_Channel7))? \
- (DMA2->IFCR = (__FLAG__)) : (DMA1->IFCR = (__FLAG__)))
+                                                    (DMA2->IFCR = (__FLAG__)) : (DMA1->IFCR = (__FLAG__)))
 
 /**
   * @brief  Enable the specified DMA Channel interrupts.
@@ -583,10 +582,12 @@ HAL_StatusTypeDef HAL_DMA_DeInit(DMA_HandleTypeDef *hdma);
   */
 /* IO operation functions *****************************************************/
 HAL_StatusTypeDef HAL_DMA_Start(DMA_HandleTypeDef *hdma, uint32_t SrcAddress, uint32_t DstAddress, uint32_t DataLength);
-HAL_StatusTypeDef HAL_DMA_Start_IT(DMA_HandleTypeDef *hdma, uint32_t SrcAddress, uint32_t DstAddress, uint32_t DataLength);
+HAL_StatusTypeDef HAL_DMA_Start_IT(DMA_HandleTypeDef *hdma, uint32_t SrcAddress, uint32_t DstAddress,
+                                   uint32_t DataLength);
 HAL_StatusTypeDef HAL_DMA_Abort(DMA_HandleTypeDef *hdma);
 HAL_StatusTypeDef HAL_DMA_Abort_IT(DMA_HandleTypeDef *hdma);
-HAL_StatusTypeDef HAL_DMA_PollForTransfer(DMA_HandleTypeDef *hdma, HAL_DMA_LevelCompleteTypeDef CompleteLevel, uint32_t Timeout);
+HAL_StatusTypeDef HAL_DMA_PollForTransfer(DMA_HandleTypeDef *hdma, HAL_DMA_LevelCompleteTypeDef CompleteLevel,
+                                          uint32_t Timeout);
 void HAL_DMA_IRQHandler(DMA_HandleTypeDef *hdma);
 HAL_StatusTypeDef HAL_DMA_RegisterCallback(DMA_HandleTypeDef *hdma, HAL_DMA_CallbackIDTypeDef CallbackID, void (* pCallback)(DMA_HandleTypeDef *_hdma));
 HAL_StatusTypeDef HAL_DMA_UnRegisterCallback(DMA_HandleTypeDef *hdma, HAL_DMA_CallbackIDTypeDef CallbackID);
@@ -658,9 +659,11 @@ HAL_StatusTypeDef HAL_DMA_GetConfigChannelAttributes(DMA_HandleTypeDef *hdma, ui
 
 #if defined(DMA_CCR_SECM) && defined(DMA_CCR_PRIV)
 #if defined (CORE_CM0PLUS)
-#define IS_DMA_ATTRIBUTES(ATTRIBUTE)            ((((ATTRIBUTE) & (~(0x001E001EU))) == 0U) && (((ATTRIBUTE) & 0x0000001EU) != 0U))
+#define IS_DMA_ATTRIBUTES(ATTRIBUTE)            ((((ATTRIBUTE)\
+                                                   & (~(0x001E001EU))) == 0U) && (((ATTRIBUTE) & 0x0000001EU) != 0U))
 #else
-#define IS_DMA_ATTRIBUTES(ATTRIBUTE)            ((((ATTRIBUTE) & (~(0x00100010U))) == 0U) && (((ATTRIBUTE) & 0x00000010U) != 0U))
+#define IS_DMA_ATTRIBUTES(ATTRIBUTE)            ((((ATTRIBUTE)\
+                                                   & (~(0x00100010U))) == 0U) && (((ATTRIBUTE) & 0x00000010U) != 0U))
 #endif /* CORE_CM0PLUS */
 #endif /* DMA_SECURE_SWITCH */
 /**
@@ -683,4 +686,3 @@ HAL_StatusTypeDef HAL_DMA_GetConfigChannelAttributes(DMA_HandleTypeDef *hdma, ui
 
 #endif /* STM32WLxx_HAL_DMA_H */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

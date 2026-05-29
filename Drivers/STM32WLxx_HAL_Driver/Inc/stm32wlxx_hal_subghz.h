@@ -6,13 +6,12 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
-  * All rights reserved.</center></h2>
+  * Copyright (c) 2020 STMicroelectronics.
+  * All rights reserved.
   *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
   *
   ******************************************************************************
   */
@@ -62,6 +61,7 @@ typedef enum
   HAL_SUBGHZ_STATE_RESET                    = 0x00U,    /*!< Peripheral not Initialized                  */
   HAL_SUBGHZ_STATE_READY                    = 0x01U,    /*!< Peripheral Initialized and ready for use    */
   HAL_SUBGHZ_STATE_BUSY                     = 0x02U,    /*!< an internal process is ongoing              */
+  HAL_SUBGHZ_STATE_RESET_RF_READY           = 0x03U,    /*!< Peripheral not Initialized but RF is        */
 } HAL_SUBGHZ_StateTypeDef;
 
 /**
@@ -104,6 +104,7 @@ typedef struct
   void (* RxTxTimeoutCallback)(struct __SUBGHZ_HandleTypeDef *hsubghz);           /*!< SUBGHZ Rx Tx Timeout callback         */
   void (* MspInitCallback)(struct __SUBGHZ_HandleTypeDef *hsubghz);               /*!< SUBGHZ Msp Init callback              */
   void (* MspDeInitCallback)(struct __SUBGHZ_HandleTypeDef *hsubghz);             /*!< SUBGHZ Msp DeInit callback            */
+  void (* LrFhssHopCallback)(struct __SUBGHZ_HandleTypeDef *hsubghz);             /*!< SUBGHZ LR FHSS Hop callback           */
 #endif  /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
 } SUBGHZ_HandleTypeDef;
 
@@ -122,8 +123,8 @@ typedef enum
   HAL_SUBGHZ_CRC_ERROR_CB_ID                = 0x06U,    /*!< SUBGHZ CRC error callback ID                */
   HAL_SUBGHZ_RX_TX_TIMEOUT_CB_ID            = 0x07U,    /*!< SUBGHZ Rx Tx timeout callback ID            */
   HAL_SUBGHZ_MSPINIT_CB_ID                  = 0x08U,    /*!< SUBGHZ Msp Init callback ID                 */
-  HAL_SUBGHZ_MSPDEINIT_CB_ID                = 0x09U     /*!< SUBGHZ Msp DeInit callback ID               */
-
+  HAL_SUBGHZ_MSPDEINIT_CB_ID                = 0x09U,    /*!< SUBGHZ Msp DeInit callback ID               */
+  HAL_SUBGHZ_LR_FHSS_HOP_CB_ID              = 0x0AU,    /*!< SUBGHZ LR FHSS Hop callback ID              */
 } HAL_SUBGHZ_CallbackIDTypeDef;
 
 /**
@@ -200,6 +201,7 @@ typedef enum
 #define HAL_SUBGHZ_ERROR_NONE               (0x00000000U)   /*!< No error                         */
 #define HAL_SUBGHZ_ERROR_TIMEOUT            (0x00000001U)   /*!< Timeout Error                    */
 #define HAL_SUBGHZ_ERROR_RF_BUSY            (0x00000002U)   /*!< RF Busy Error                    */
+#define HAL_SUBGHZ_ERROR_CRC_MISMATCH       (0x00000004U)   /*!< CRC mismatch Error               */
 #if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1)
 #define HAL_SUBGHZ_ERROR_INVALID_CALLBACK   (0x00000080U)   /*!< Invalid Callback error           */
 #endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
@@ -244,7 +246,7 @@ typedef enum
 #define SUBGHZ_IT_CAD_DONE                  0x0080U
 #define SUBGHZ_IT_CAD_ACTIVITY_DETECTED     0x0100U
 #define SUBGHZ_IT_RX_TX_TIMEOUT             0x0200U
-
+#define SUBGHZ_IT_LR_FHSS_HOP               0x4000U
 /**
   * @brief SUBGHZ Radio Read/Write Command definition
   */
@@ -267,13 +269,22 @@ typedef enum
   * @retval None
   */
 #if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1)
-#define __HAL_SUBGHZ_RESET_HANDLE_STATE(__HANDLE__)             do{                                                  \
-                                                                    (__HANDLE__)->State = HAL_SUBGHZ_STATE_RESET;    \
-                                                                    (__HANDLE__)->MspInitCallback = NULL;            \
-                                                                    (__HANDLE__)->MspDeInitCallback = NULL;          \
-                                                                  } while(0U)
+#define __HAL_SUBGHZ_RESET_HANDLE_STATE(__HANDLE__)  \
+  do{                                                \
+    (__HANDLE__)->State = HAL_SUBGHZ_STATE_RESET;    \
+    (__HANDLE__)->MspInitCallback = NULL;            \
+    (__HANDLE__)->MspDeInitCallback = NULL;          \
+  } while(0U)
+
+#define __HAL_SUBGHZ_RESET_HANDLE_STATE_RF_READY(__HANDLE__)  \
+  do{                                                         \
+    (__HANDLE__)->State = HAL_SUBGHZ_STATE_RESET_RF_READY;    \
+    (__HANDLE__)->MspInitCallback = NULL;                     \
+    (__HANDLE__)->MspDeInitCallback = NULL;                   \
+  } while(0U)
 #else
-#define __HAL_SUBGHZ_RESET_HANDLE_STATE(__HANDLE__) ((__HANDLE__)->State = HAL_SUBGHZ_STATE_RESET)
+#define __HAL_SUBGHZ_RESET_HANDLE_STATE(__HANDLE__)          ((__HANDLE__)->State = HAL_SUBGHZ_STATE_RESET)
+#define __HAL_SUBGHZ_RESET_HANDLE_STATE_RF_READY(__HANDLE__) ((__HANDLE__)->State = HAL_SUBGHZ_STATE_RESET_RF_READY)
 #endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
 /**
   * @}
@@ -298,6 +309,7 @@ typedef enum
   *            @arg SUBGHZ_IT_CAD_DONE
   *            @arg SUBGHZ_IT_CAD_ACTIVITY_DETECTED
   *            @arg SUBGHZ_IT_RX_TX_TIMEOUT
+  *            @arg SUBGHZ_IT_LR_FHSS_HOP
   * @retval SET or RESET.
   */
 #define SUBGHZ_CHECK_IT_SOURCE(__SUBGHZ_IRQ__, __INTERRUPT__)       \
@@ -379,6 +391,7 @@ void HAL_SUBGHZ_HeaderErrorCallback(SUBGHZ_HandleTypeDef *hsubghz);
 void HAL_SUBGHZ_CRCErrorCallback(SUBGHZ_HandleTypeDef *hsubghz);
 void HAL_SUBGHZ_CADStatusCallback(SUBGHZ_HandleTypeDef *hsubghz, HAL_SUBGHZ_CadStatusTypeDef cadstatus);
 void HAL_SUBGHZ_RxTxTimeoutCallback(SUBGHZ_HandleTypeDef *hsubghz);
+void HAL_SUBGHZ_LrFhssHopCallback(SUBGHZ_HandleTypeDef *hsubghz);
 /**
   * @}
   */
@@ -387,8 +400,11 @@ void HAL_SUBGHZ_RxTxTimeoutCallback(SUBGHZ_HandleTypeDef *hsubghz);
   * @{
   */
 /* Peripheral State and Error functions ***************************************/
-HAL_SUBGHZ_StateTypeDef HAL_SUBGHZ_GetState(SUBGHZ_HandleTypeDef *hsubghz);
-uint32_t                HAL_SUBGHZ_GetError(SUBGHZ_HandleTypeDef *hsubghz);
+HAL_SUBGHZ_StateTypeDef HAL_SUBGHZ_GetState(const SUBGHZ_HandleTypeDef *hsubghz);
+uint32_t                HAL_SUBGHZ_GetError(const SUBGHZ_HandleTypeDef *hsubghz);
+
+HAL_StatusTypeDef HAL_SUBGHZ_WaitOnBusy(SUBGHZ_HandleTypeDef *hsubghz);
+HAL_StatusTypeDef HAL_SUBGHZ_CheckDeviceReady(SUBGHZ_HandleTypeDef *hsubghz);
 /**
   * @}
   */
@@ -411,4 +427,3 @@ uint32_t                HAL_SUBGHZ_GetError(SUBGHZ_HandleTypeDef *hsubghz);
 
 #endif /* STM32WLxx_HAL_SUBGHZ_H */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

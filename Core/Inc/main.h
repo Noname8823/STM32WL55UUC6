@@ -76,7 +76,8 @@ void MX_SUBGHZ_Init(void);
 #define LED2_GPIO_Port GPIOA
 #define RF_MODE_Pin GPIO_PIN_13
 #define RF_MODE_GPIO_Port GPIOC
-
+#define RS485_DIR_Pin GPIO_PIN_12
+#define RS485_DIR_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

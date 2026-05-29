@@ -22,7 +22,8 @@
 #include "radio_board_if.h"
 
 /* USER CODE BEGIN Includes */
-
+#define RF_SWITCH_RX_LEVEL   GPIO_PIN_RESET
+#define RF_SWITCH_TX_LEVEL   GPIO_PIN_SET
 /* USER CODE END Includes */
 
 /* External variables ---------------------------------------------------------*/
@@ -58,28 +59,23 @@
 /* Exported functions --------------------------------------------------------*/
 int32_t RBI_Init(void)
 {
-  /* USER CODE BEGIN RBI_Init_1 */
-
-  /* USER CODE END RBI_Init_1 */
 #if defined(USE_BSP_DRIVER)
-  /* Important note: BSP code is board dependent
-   * STM32WL_Nucleo code can be found
-   *       either in STM32CubeWL package under Drivers/BSP/STM32WLxx_Nucleo/
-   *       or at https://github.com/STMicroelectronics/STM32CubeWL/tree/main/Drivers/BSP/STM32WLxx_Nucleo/
-   * 1/ For User boards, the BSP/STM32WLxx_Nucleo/ directory can be copied and replaced in the project. The copy must then be updated depending:
-   *       on board RF switch configuration (pin control, number of port etc)
-   *       on TCXO configuration
-   *       on DC/DC configuration
-   *       on maximum output power that the board can deliver*/
-  return BSP_RADIO_Init();
+    return BSP_RADIO_Init();
 #else
-  /* 2/ Or implement RBI_Init here */
-  int32_t retcode = 0;
-  /* USER CODE BEGIN RBI_Init_2 */
-#warning user to provide its board code or to call his board driver functions
-  /* USER CODE END RBI_Init_2 */
-  return retcode;
-#endif  /* USE_BSP_DRIVER  */
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+
+    GPIO_InitStruct.Pin = RF_MODE_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(RF_MODE_GPIO_Port, &GPIO_InitStruct);
+
+    HAL_GPIO_WritePin(RF_MODE_GPIO_Port, RF_MODE_Pin, RF_SWITCH_RX_LEVEL);
+
+    return 0;
+#endif
 }
 
 int32_t RBI_DeInit(void)
@@ -108,33 +104,32 @@ int32_t RBI_DeInit(void)
 #endif  /* USE_BSP_DRIVER */
 }
 
+
 int32_t RBI_ConfigRFSwitch(RBI_Switch_TypeDef Config)
 {
-  /* USER CODE BEGIN RBI_ConfigRFSwitch_1 */
-
-  /* USER CODE END RBI_ConfigRFSwitch_1 */
 #if defined(USE_BSP_DRIVER)
-
-  /* Important note: BSP code is board dependent
-   * STM32WL_Nucleo code can be found
-   *       either in STM32CubeWL package under Drivers/BSP/STM32WLxx_Nucleo/
-   *       or at https://github.com/STMicroelectronics/STM32CubeWL/tree/main/Drivers/BSP/STM32WLxx_Nucleo/
-   * 1/ For User boards, the BSP/STM32WLxx_Nucleo/ directory can be copied and replaced in the project. The copy must then be updated depending:
-   *       on board RF switch configuration (pin control, number of port etc)
-   *       on TCXO configuration
-   *       on DC/DC configuration
-   *       on maximum output power that the board can deliver*/
-  return BSP_RADIO_ConfigRFSwitch((BSP_RADIO_Switch_TypeDef) Config);
+    return BSP_RADIO_ConfigRFSwitch((BSP_RADIO_Switch_TypeDef) Config);
 #else
-  /* 2/ Or implement RBI_ConfigRFSwitch here */
-  int32_t retcode = 0;
-  /* USER CODE BEGIN RBI_ConfigRFSwitch_2 */
-#warning user to provide its board code or to call his board driver functions
-  /* USER CODE END RBI_ConfigRFSwitch_2 */
-  return retcode;
-#endif  /* USE_BSP_DRIVER */
-}
+    switch (Config)
+    {
+    case RBI_SWITCH_RX:
+        HAL_GPIO_WritePin(RF_MODE_GPIO_Port, RF_MODE_Pin, RF_SWITCH_RX_LEVEL);
+        break;
 
+    case RBI_SWITCH_RFO_LP:
+    case RBI_SWITCH_RFO_HP:
+        HAL_GPIO_WritePin(RF_MODE_GPIO_Port, RF_MODE_Pin, RF_SWITCH_TX_LEVEL);
+        break;
+
+    case RBI_SWITCH_OFF:
+    default:
+        HAL_GPIO_WritePin(RF_MODE_GPIO_Port, RF_MODE_Pin, RF_SWITCH_RX_LEVEL);
+        break;
+    }
+
+    return 0;
+#endif
+}
 int32_t RBI_GetTxConfig(void)
 {
   /* USER CODE BEGIN RBI_GetTxConfig_1 */

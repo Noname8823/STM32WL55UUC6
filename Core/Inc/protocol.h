@@ -1,10 +1,7 @@
 #ifndef INC_PROTOCOL_H_
 #define INC_PROTOCOL_H_
 
-#include "stdio.h"
-
-//#define EXAMPLE_TX
-#define EXAMPLE_RX
+#include <stdint.h>
 
 #define MAC_ADDRESS_SIZE 8
 

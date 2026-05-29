@@ -76,6 +76,8 @@ uint8_t MX_SubGhz_Phy_Get_RecvicePacket_State();
 void MX_SubGhz_Phy_Get_RecvicePacket(int16_t *rssi, int8_t *snr,
 		uint8_t *payload, uint8_t *payload_size);
 
+void MX_SubGhz_Phy_ReceivePacketTimeout(uint16_t timeout);
+
 /* USER CODE END EFP */
 
 #ifdef __cplusplus

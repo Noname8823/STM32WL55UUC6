@@ -24,7 +24,7 @@
 #include "subghz_phy_app.h"
 #include "radio.h"
 #include "cmsis_os.h"
-
+#include "app_config.h"
 /* USER CODE BEGIN Includes */
 
 #include "stdio.h"
@@ -163,9 +163,12 @@ static void OnRxTimeout(void);
 static void OnRxError(void);
 
 /* USER CODE BEGIN PFP */
+
 /* USER CODE END PFP */
 
 /* Exported functions ---------------------------------------------------------*/
+void SubghzApp_ApplyConfig(const AppConfig_t *cfg);
+
 void SubghzApp_Init(void)
 {
   /* USER CODE BEGIN SubghzApp_Init_1 */
@@ -182,17 +185,8 @@ void SubghzApp_Init(void)
 
   /* USER CODE BEGIN SubghzApp_Init_2 */
 
-	Radio.SetChannel(RF_FREQUENCY);
-
-	Radio.SetTxConfig(MODEM_LORA, TX_OUTPUT_POWER, 0, LORA_BANDWIDTH,
-	LORA_SPREADING_FACTOR, LORA_CODINGRATE, LORA_PREAMBLE_LENGTH,
-	LORA_FIX_LENGTH_PAYLOAD_ON,
-	true, 0, 0, LORA_IQ_INVERSION_ON, 3000);
-
-	Radio.SetRxConfig(MODEM_LORA, LORA_BANDWIDTH, LORA_SPREADING_FACTOR,
-	LORA_CODINGRATE, 0, LORA_PREAMBLE_LENGTH, LORA_SYMBOL_TIMEOUT,
-	LORA_FIX_LENGTH_PAYLOAD_ON, 0, true, 0, 0, LORA_IQ_INVERSION_ON,
-	true);
+  SubghzApp_ApplyConfig(&g_app_config);
+  Radio.Sleep();
 
 	Radio.SetPublicNetwork(false);
 
@@ -204,6 +198,52 @@ void SubghzApp_Init(void)
 }
 
 /* USER CODE BEGIN EF */
+
+void SubghzApp_ApplyConfig(const AppConfig_t *cfg)
+{
+    if (cfg == NULL)
+    {
+        return;
+    }
+
+    Radio.SetChannel(cfg->frequency);
+
+    Radio.SetTxConfig(
+        MODEM_LORA,
+        cfg->tx_power,
+        0,
+        cfg->bandwidth,
+        cfg->spreading_factor,
+        cfg->coding_rate,
+        cfg->preamble_len,
+        false,
+        true,
+        0,
+        0,
+        false,
+        3000
+    );
+
+    Radio.SetRxConfig(
+        MODEM_LORA,
+        cfg->bandwidth,
+        cfg->spreading_factor,
+        cfg->coding_rate,
+        0,
+        cfg->preamble_len,
+        cfg->symbol_timeout,
+        false,
+        0,
+        true,
+        0,
+        0,
+        false,
+        true
+    );
+
+    Radio.SetPublicNetwork(false);
+    Radio.SetMaxPayloadLength(MODEM_LORA, 128);
+}
 
 void PacketSendCallbackRegister(PacketSendCallback callback) {
 

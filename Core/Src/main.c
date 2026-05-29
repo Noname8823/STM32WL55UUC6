@@ -29,7 +29,8 @@
 #include "board_define.h"
 #include "protocol.h"
 #include "radio_pin_manager.h"
-
+#include "app_logic.h"
+#include "rs485.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -210,7 +211,7 @@ int main(void)
 
   /* Create the semaphores(s) */
   /* creation of radioBinarySem */
-  radioBinarySemHandle = osSemaphoreNew(1, 1, &radioBinarySem_attributes);
+  radioBinarySemHandle = osSemaphoreNew(1, 0, &radioBinarySem_attributes);
 
   /* creation of mainBinarySem */
   mainBinarySemHandle = osSemaphoreNew(1, 1, &mainBinarySem_attributes);
@@ -492,9 +493,11 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : RF_MODE_Pin */
   GPIO_InitStruct.Pin = RF_MODE_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(RF_MODE_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_WritePin(RF_MODE_GPIO_Port, RF_MODE_Pin, GPIO_PIN_RESET);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
@@ -505,30 +508,7 @@ static void MX_GPIO_Init(void)
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
-#ifdef EXAMPLE_TX
-
-	if (huart->Instance == huart2.Instance) {
-
-		uart_rx_buffer[uart_rx_buffer_size++] = uart_2_data;
-
-		if (uart_rx_buffer_size >= sizeof(uart_rx_buffer)) {
-
-			uart_rx_buffer_size = 0;
-
-		}
-
-		if (uart_2_data == '\n') {
-
-			cycle_timeout_count = 0;
-			osSemaphoreRelease(mainBinarySemHandle);
-
-		}
-
-		HAL_UART_Receive_IT(&huart2, &uart_2_data, 1);
-
-	}
-
-#endif
+	RS485_UART_RxCpltCallback(huart);
 
 }
 
@@ -709,117 +689,15 @@ static void set_uart_usb_in_out_payload(
 /* USER CODE END Header_StartRadioTask */
 void StartRadioTask(void *argument)
 {
-  /* init code for SubGHz_Phy */
-  MX_SubGHz_Phy_Init();
   /* USER CODE BEGIN 5 */
 
-//	HAL_GPIO_WritePin(RF_SWITCH_VDD_GPIO_Port, RF_SWITCH_VDD_Pin,
-//			GPIO_PIN_RESET);
-//	set_radio_pin_manager_rf_switch_vdd_pin(RF_SWITCH_VDD_GPIO_Port,
-//	RF_SWITCH_VDD_Pin);
-//
-//	HAL_GPIO_WritePin(RF_SWITCH_CTRL_GPIO_Port, RF_SWITCH_CTRL_Pin,
-//			GPIO_PIN_RESET);
-//	set_radio_pin_manager_rf_switch_pin(RF_SWITCH_CTRL_GPIO_Port,
-//	RF_SWITCH_CTRL_Pin);
+  for (;;)
+  {
+      osDelay(1000);
+  }
 
-  HAL_GPIO_WritePin(RF_MODE_GPIO_Port,
-						RF_MODE_Pin,
-						GPIO_PIN_RESET);
-
-  set_radio_pin_manager_rf_switch_pin(RF_MODE_GPIO_Port,
-										 RF_MODE_Pin);
-	/* Infinite loop */
-	for (;;) {
-
-#ifdef EXAMPLE_TX
-
-		osSemaphoreAcquire(radioBinarySemHandle, osWaitForever);
-
-		radio_timer_count = 0;
-		radio_state = RADIO_TX_START;
-		MX_SubGhz_Phy_SendPacket(radio_tx_buffer, radio_tx_buffer_size);
-
-		osSemaphoreAcquire(radioBinarySemHandle, RADIO_TX_TIMEOUT_COUNT);
-
-		if (MX_SubGhz_Phy_Get_SendPacket_State() == 0x01) {
-
-			radio_timer_count = 0;
-			radio_state = RADIO_RX_START;
-
-			radio_rx_rssi = 0;
-			radio_rx_snr = 0;
-			radio_rx_buffer_size = 0;
-			memset(radio_rx_buffer, 0x00, sizeof(radio_rx_buffer));
-
-			MX_SubGhz_Phy_RecvicePacket();
-
-			osSemaphoreAcquire(radioBinarySemHandle, RADIO_RX_TIMEOUT_COUNT);
-
-			if (MX_SubGhz_Phy_Get_RecvicePacket_State() == 0x01) {
-
-				MX_SubGhz_Phy_Get_RecvicePacket(&radio_rx_rssi, &radio_rx_snr,
-						radio_rx_buffer, &radio_rx_buffer_size);
-
-			}
-
-		}
-
-		radio_timer_count = 0;
-		radio_state = RADIO_SLEEP;
-		MX_SubGhz_Phy_Radio_Sleep();
-
-		osSemaphoreRelease(mainBinarySemHandle);
-
-#endif
-
-#ifdef EXAMPLE_RX
-
-		radio_timer_count = 0;
-		radio_state = RADIO_RX_START;
-
-		radio_rx_rssi = 0;
-		radio_rx_snr = 0;
-		radio_rx_buffer_size = 0;
-		memset(radio_rx_buffer, 0x00, sizeof(radio_rx_buffer));
-
-		MX_SubGhz_Phy_RecvicePacket();
-
-		osSemaphoreAcquire(radioBinarySemHandle, osWaitForever);
-
-		if (MX_SubGhz_Phy_Get_RecvicePacket_State() == 0x01) {
-
-			MX_SubGhz_Phy_Get_RecvicePacket(&radio_rx_rssi, &radio_rx_snr,
-					radio_rx_buffer, &radio_rx_buffer_size);
-
-		}
-
-		radio_timer_count = 0;
-		radio_state = RADIO_TX_START;
-		MX_SubGhz_Phy_SendPacket(radio_tx_buffer, radio_tx_buffer_size);
-
-		osSemaphoreAcquire(radioBinarySemHandle, RADIO_TX_TIMEOUT_COUNT);
-
-		if (MX_SubGhz_Phy_Get_SendPacket_State() == 0x01) {
-
-		}
-
-		radio_timer_count = 0;
-		radio_state = RADIO_SLEEP;
-		MX_SubGhz_Phy_Radio_Sleep();
-
-		osSemaphoreRelease(mainBinarySemHandle);
-
-		HAL_GPIO_TogglePin(GPIO_LED_2_Port, GPIO_LED_2_Pin);
-
-		osDelay(10);
-
-#endif
-
-	}
   /* USER CODE END 5 */
 }
-
 /* USER CODE BEGIN Header_StartMainTask */
 /**
  * @brief Function implementing the mainTask thread.
@@ -831,170 +709,15 @@ void StartMainTask(void *argument)
 {
   /* USER CODE BEGIN StartMainTask */
 
-	HAL_GPIO_WritePin(GPIO_LED_0_Port, GPIO_LED_0_Pin, 1);
-	HAL_GPIO_WritePin(GPIO_LED_1_Port, GPIO_LED_1_Pin, 1);
+  App_Init();
 
-	uint32_t ID1 = HAL_GetUIDw0();
-	uint32_t ID2 = HAL_GetUIDw1();
-	uint32_t ID3 = HAL_GetUIDw2();
+  for (;;)
+  {
+      App_Process();
+  }
 
-	mac_address[7] = (ID1 + ID3) >> 24;
-	mac_address[6] = (ID1 + ID3) >> 16;
-	mac_address[5] = (ID1 + ID3) >> 8;
-	mac_address[4] = (ID1 + ID3);
-	mac_address[3] = ID2 >> 24;
-	mac_address[2] = ID2 >> 16;
-	mac_address[1] = ID2 >> 8;
-	mac_address[0] = ID2;
-
-	radio_packet_protocol.Packet.company_id[0] = COMPANY_ID >> 8;
-	radio_packet_protocol.Packet.company_id[1] = COMPANY_ID;
-
-	radio_packet_protocol.Packet.device_id[0] = DEVICE_ID >> 8;
-	radio_packet_protocol.Packet.device_id[1] = DEVICE_ID;
-
-	memcpy(radio_packet_protocol.Packet.mac_address, mac_address, 8);
-
-	radio_packet_protocol.Packet.control_number = 0;
-
-	memset(radio_packet_protocol.Packet.paylaod, 0x00,
-			sizeof(radio_packet_protocol.Packet.paylaod));
-
-	set_uart_usb_in_out_write_string("\r\n\r\n");
-
-#ifdef EXAMPLE_TX
-
-	set_uart_usb_in_out_write_string("Start AxDen TX Example");
-
-#endif
-
-#ifdef EXAMPLE_RX
-
-	uart_rx_buffer_size = sprintf((char*) uart_rx_buffer, "Pong");
-
-	radio_packet_protocol_size = PACKET_HEAD_SIZE;
-	radio_packet_protocol_size += uart_rx_buffer_size;
-	memcpy(radio_packet_protocol.Packet.paylaod, uart_rx_buffer,
-			uart_rx_buffer_size);
-
-	radio_tx_buffer_size = 0;
-	memset(radio_tx_buffer, 0x0, sizeof(radio_tx_buffer));
-
-	radio_tx_buffer_size = radio_packet_protocol_size;
-	memcpy(radio_tx_buffer, radio_packet_protocol.buffer,
-			radio_packet_protocol_size);
-
-	set_uart_usb_in_out_write_string("Start AxDen RX Example");
-
-#endif
-
-	set_uart_usb_in_out_mac_address(mac_address);
-
-	set_uart_usb_in_out_write_string("Start I2C scan");
-
-	//get_i2c_scan_address();
-
-	//get_voltage_level();
-
-#ifdef EXAMPLE_TX
-
-	HAL_UART_Receive_IT(&huart2, &uart_2_data, 1);
-
-#endif
-
-	if (mainTimerHandle != NULL) {
-
-		osTimerStart(mainTimerHandle, 100);
-
-	}
-
-	/* Infinite loop */
-	for (;;) {
-
-#ifdef EXAMPLE_TX
-
-		osSemaphoreAcquire(mainBinarySemHandle, osWaitForever);
-
-		set_uart_usb_in_out_write_string("Start TX");
-
-		memset(radio_packet_protocol.Packet.paylaod, 0x00,
-				sizeof(radio_packet_protocol.Packet.paylaod));
-
-		if (uart_rx_buffer_size == 0) {
-
-			uart_rx_buffer_size = sprintf((char*) uart_rx_buffer, "Ping");
-
-		}
-
-		radio_packet_protocol_size = PACKET_HEAD_SIZE;
-		radio_packet_protocol_size += uart_rx_buffer_size;
-		memcpy(radio_packet_protocol.Packet.paylaod, uart_rx_buffer,
-				uart_rx_buffer_size);
-
-		radio_tx_buffer_size = 0;
-		memset(radio_tx_buffer, 0x0, sizeof(radio_tx_buffer));
-
-		radio_tx_buffer_size = radio_packet_protocol_size;
-		memcpy(radio_tx_buffer, radio_packet_protocol.buffer,
-				radio_packet_protocol_size);
-
-		uart_rx_buffer_size = 0;
-		memset(uart_rx_buffer, 0x0, sizeof(uart_rx_buffer));
-
-		//TX Data
-		osSemaphoreRelease(radioBinarySemHandle);
-
-		//Print RX data
-		osSemaphoreAcquire(mainBinarySemHandle, osWaitForever);
-
-		if (radio_rx_buffer_size > 0) {
-
-			memset(&radio_packet_protocol, 0x00,
-					sizeof(radio_packet_protocol_t));
-
-			memcpy(radio_packet_protocol.buffer, radio_rx_buffer,
-					radio_rx_buffer_size);
-
-			set_uart_usb_in_out_payload(radio_packet_protocol, radio_rx_rssi,
-					radio_rx_snr);
-
-		} else {
-
-			set_uart_usb_in_out_write_string("RX Timeout");
-
-		}
-
-		HAL_GPIO_TogglePin(GPIO_LED_2_Port, GPIO_LED_2_Pin);
-
-#endif
-
-#ifdef EXAMPLE_RX
-
-		osSemaphoreAcquire(mainBinarySemHandle, osWaitForever);
-
-		if (radio_rx_buffer_size > 0) {
-
-			memset(&radio_packet_protocol, 0x00,
-					sizeof(radio_packet_protocol_t));
-
-			memcpy(radio_packet_protocol.buffer, radio_rx_buffer,
-					radio_rx_buffer_size);
-
-			set_uart_usb_in_out_payload(radio_packet_protocol, radio_rx_rssi,
-					radio_rx_snr);
-
-		} else {
-
-			set_uart_usb_in_out_write_string("RX Timeout");
-
-		}
-
-#endif
-
-	}
   /* USER CODE END StartMainTask */
 }
-
 /* mainTimerCallback function */
 void mainTimerCallback(void *argument)
 {

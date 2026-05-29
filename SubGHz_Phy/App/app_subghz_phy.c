@@ -161,6 +161,12 @@ void MX_SubGhz_Phy_Get_RecvicePacket(int16_t *rssi, int8_t *snr,
 
 }
 
+void MX_SubGhz_Phy_ReceivePacketTimeout(uint16_t timeout)
+{
+    radio_rx_state = 0x00;
+    SubghzApp_RX(timeout);
+}
+
 /* USER CODE END EF */
 
 /* Private Functions Definition -----------------------------------------------*/

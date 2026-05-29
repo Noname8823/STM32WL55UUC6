@@ -1,47 +1,51 @@
-#include "Isolated_Input.h"
-#include "main.h"
+#include "isolated_input.h"
 
 void Input_Init(void)
 {
-    // Hiện tại chưa cần làm gì
+    /* GPIO đã init trong MX_GPIO_Init rồi */
 }
 
-static GPIO_PinState Input_ReadRaw(InputChannel_t ch)
+uint8_t Input_GetState(uint8_t ch)
 {
+    GPIO_PinState s = GPIO_PIN_RESET;
+
     switch (ch)
     {
-        case INPUT_1:
-            return HAL_GPIO_ReadPin(IN1_GPIO_Port, IN1_Pin);
+    case 0:
+        s = HAL_GPIO_ReadPin(IN1_GPIO_Port, IN1_Pin);
+        break;
 
-        case INPUT_2:
-            return HAL_GPIO_ReadPin(IN2_GPIO_Port, IN2_Pin);
+    case 1:
+        s = HAL_GPIO_ReadPin(IN2_GPIO_Port, IN2_Pin);
+        break;
 
-        case INPUT_3:
-            return HAL_GPIO_ReadPin(IN3_GPIO_Port, IN3_Pin);
+    case 2:
+        s = HAL_GPIO_ReadPin(IN3_GPIO_Port, IN3_Pin);
+        break;
 
-        case INPUT_4:
-            return HAL_GPIO_ReadPin(IN4_GPIO_Port, IN4_Pin);
+    case 3:
+        s = HAL_GPIO_ReadPin(IN4_GPIO_Port, IN4_Pin);
+        break;
 
-        default:
-            return GPIO_PIN_RESET;
+    default:
+        return 0;
     }
-}
 
-uint8_t Input_GetState(InputChannel_t ch)
-{
-    GPIO_PinState raw = Input_ReadRaw(ch);
-
-#if INPUT_ACTIVE_LOW
-    return (raw == GPIO_PIN_RESET) ? 1 : 0;
+#if INPUT_ACTIVE_HIGH
+    return (s == GPIO_PIN_SET) ? 1 : 0;
 #else
-    return (raw == GPIO_PIN_SET) ? 1 : 0;
+    return (s == GPIO_PIN_RESET) ? 1 : 0;
 #endif
 }
 
-void Input_GetAll(uint8_t State[4])
+uint8_t Input_GetMask(void)
 {
-    State[0] = Input_GetState(INPUT_1);
-    State[1] = Input_GetState(INPUT_2);
-    State[2] = Input_GetState(INPUT_3);
-    State[3] = Input_GetState(INPUT_4);
+    uint8_t mask = 0;
+
+    if (Input_GetState(0)) mask |= 0x01;
+    if (Input_GetState(1)) mask |= 0x02;
+    if (Input_GetState(2)) mask |= 0x04;
+    if (Input_GetState(3)) mask |= 0x08;
+
+    return mask;
 }

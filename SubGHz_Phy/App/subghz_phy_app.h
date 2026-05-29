@@ -18,6 +18,7 @@
  */
 
 #include "stdint.h"
+#include "app_config.h"
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
@@ -69,6 +70,8 @@ extern "C" {
 /**
   * @brief  Init Subghz Application
   */
+void SubghzApp_ApplyConfig(const AppConfig_t *cfg);
+
 void SubghzApp_Init(void);
 
 /* USER CODE BEGIN EFP */

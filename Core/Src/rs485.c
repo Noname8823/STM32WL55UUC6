@@ -46,14 +46,24 @@ void RS485_Send(uint8_t *data, uint16_t size)
 
     RS485_SetTxMode();
 
-    HAL_UART_Transmit(rs485_huart, data, size, 1000);
+    if (HAL_UART_Transmit(rs485_huart, data, size, 1000) != HAL_OK)
+    {
+        RS485_SetRxMode();
+        HAL_UART_Receive_IT(rs485_huart, &rx_byte, 1);
+        return;
+    }
+
+    uint32_t start_tick = HAL_GetTick();
 
     while (__HAL_UART_GET_FLAG(rs485_huart, UART_FLAG_TC) == RESET)
     {
+        if ((HAL_GetTick() - start_tick) > 20)
+        {
+            break;
+        }
     }
 
     RS485_SetRxMode();
-
     HAL_UART_Receive_IT(rs485_huart, &rx_byte, 1);
 }
 

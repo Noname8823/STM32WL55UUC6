@@ -1,26 +1,20 @@
-/*
- * app_config.h
- *
- *  Created on: May 29, 2026
- *      Author: tranquocvu2
- */
+#ifndef __APP_CONFIG_H
+#define __APP_CONFIG_H
 
-#ifndef INC_APP_CONFIG_H_
-#define INC_APP_CONFIG_H_
-
+#include "main.h"
 #include <stdint.h>
 
 typedef enum
 {
-    DEVICE_ROLE_RX = 0,
-    DEVICE_ROLE_TX = 1
+    DEVICE_ROLE_TX = 0,
+    DEVICE_ROLE_RX = 1
 } DeviceRole_t;
 
 typedef struct
 {
     uint8_t node_id;
     uint8_t dest_id;
-    uint8_t role;
+    DeviceRole_t role;
 
     uint32_t frequency;
     int8_t tx_power;
@@ -30,13 +24,13 @@ typedef struct
     uint8_t coding_rate;
 
     uint16_t preamble_len;
-    uint8_t symbol_timeout;
+    uint16_t symbol_timeout;
 } AppConfig_t;
 
 extern AppConfig_t g_app_config;
 
 void AppConfig_SetDefault(void);
 void AppConfig_Load(void);
-void AppConfig_Save(void);
+HAL_StatusTypeDef AppConfig_Save(void);
 
-#endif /* INC_APP_CONFIG_H_ */
+#endif

@@ -5,7 +5,6 @@
  *      Author: tranquocvu2
  */
 
-
 #include "app_logic.h"
 #include "app_config.h"
 #include "isolated_input.h"
@@ -22,21 +21,51 @@
 extern UART_HandleTypeDef huart2;
 extern osSemaphoreId_t radioBinarySemHandle;
 
+#define RF_TX_TIMEOUT_MS        3000U
+#define RF_ACK_TIMEOUT_MS       500U
+#define RF_RETRY_MAX            3U
+
+#define INPUT_DEBOUNCE_MS       30U
+#define INPUT_HEARTBEAT_MS      10000U
+
 static uint8_t seq = 0;
 static uint8_t last_input_mask = 0xFF;
 static uint32_t last_input_send_tick = 0;
+
+static uint8_t candidate_input_mask = 0xFF;
+static uint32_t input_change_tick = 0;
 
 static int16_t rx_rssi;
 static int8_t rx_snr;
 static uint8_t rf_rx_size;
 static uint8_t rf_rx_buffer[128];
 
+/*
+ * Dùng để chống xử lý lại packet cũ khi TX retry.
+ * Ví dụ:
+ * TX gửi seq=10
+ * RX nhận được và gửi ACK
+ * ACK bị mất
+ * TX retry seq=10
+ * RX nhận lại seq=10 thì vẫn ACK lại, nhưng không xử lý data lần 2.
+ */
+static uint8_t last_rx_seq[256];
+static uint8_t last_rx_seq_valid[256];
+
 static void App_PrintConfig(void);
+static void App_ClearRadioSem(void);
 static void App_ProcessCommand(char *cmd);
 static void App_SendInputPacket(uint8_t input_mask);
 static void App_SendRs485Packet(char *text);
 static void App_CheckRadioRx(void);
 static void App_HandleReceivedPacket(RfPacket_t *pkt, int16_t rssi, int8_t snr);
+
+static uint8_t App_SendRawPacket(RfPacket_t *pkt, uint8_t size);
+static uint8_t App_SendPacketReliable(RfPacket_t *pkt, uint8_t size);
+static uint8_t App_WaitAck(uint8_t peer_id, uint8_t pkt_seq);
+static void App_SendAck(uint8_t dst_id, uint8_t ack_seq);
+
+static uint8_t App_IsDuplicatePacket(RfPacket_t *pkt);
 
 void App_Init(void)
 {
@@ -49,6 +78,14 @@ void App_Init(void)
     SubghzApp_ApplyConfig(&g_app_config);
 
     last_input_mask = Input_GetMask();
+    candidate_input_mask = last_input_mask;
+    input_change_tick = HAL_GetTick();
+    last_input_send_tick = HAL_GetTick();
+
+    memset(last_rx_seq, 0, sizeof(last_rx_seq));
+    memset(last_rx_seq_valid, 0, sizeof(last_rx_seq_valid));
+
+    App_ClearRadioSem();
 
     RS485_SendString("\r\nSTM32WL55 RS485 + INPUT + RF READY\r\n");
     App_PrintConfig();
@@ -60,7 +97,11 @@ void App_Process(void)
 
     if (RS485_GetLine(line, sizeof(line)))
     {
-        if (strncmp(line, "AT+", 3) == 0)
+        /*
+         * Sửa chỗ này:
+         * Trước đó chỉ check "AT+", nên lệnh "AT" thường sẽ không chạy.
+         */
+        if ((strcmp(line, "AT") == 0) || (strncmp(line, "AT+", 3) == 0))
         {
             App_ProcessCommand(line);
         }
@@ -79,19 +120,37 @@ void App_Process(void)
 
     if (g_app_config.role == DEVICE_ROLE_TX)
     {
+        uint32_t now_tick = HAL_GetTick();
         uint8_t now_mask = Input_GetMask();
 
-        if (now_mask != last_input_mask)
+        /*
+         * Debounce input:
+         * Nếu input vừa đổi, chưa gửi ngay.
+         * Đợi ổn định INPUT_DEBOUNCE_MS rồi mới gửi.
+         */
+        if (now_mask != candidate_input_mask)
         {
-            last_input_mask = now_mask;
-            App_SendInputPacket(now_mask);
-            last_input_send_tick = HAL_GetTick();
+            candidate_input_mask = now_mask;
+            input_change_tick = now_tick;
         }
 
-        if (HAL_GetTick() - last_input_send_tick > 1000)
+        if ((candidate_input_mask != last_input_mask) &&
+            ((now_tick - input_change_tick) >= INPUT_DEBOUNCE_MS))
         {
-            App_SendInputPacket(now_mask);
-            last_input_send_tick = HAL_GetTick();
+            last_input_mask = candidate_input_mask;
+            App_SendInputPacket(last_input_mask);
+            last_input_send_tick = now_tick;
+        }
+
+        /*
+         * Heartbeat:
+         * Không cần gửi lại mỗi 1s.
+         * 10s gửi lại một lần để báo node còn sống.
+         */
+        if ((now_tick - last_input_send_tick) >= INPUT_HEARTBEAT_MS)
+        {
+            App_SendInputPacket(last_input_mask);
+            last_input_send_tick = now_tick;
         }
     }
 
@@ -100,10 +159,38 @@ void App_Process(void)
     osDelay(10);
 }
 
+static void App_ClearRadioSem(void)
+{
+    while (osSemaphoreAcquire(radioBinarySemHandle, 0U) == osOK)
+    {
+    }
+}
+
+static uint8_t App_IsDuplicatePacket(RfPacket_t *pkt)
+{
+    if (pkt == NULL)
+    {
+        return 1U;
+    }
+
+    if (last_rx_seq_valid[pkt->src_id] &&
+        last_rx_seq[pkt->src_id] == pkt->seq)
+    {
+        return 1U;
+    }
+
+    last_rx_seq_valid[pkt->src_id] = 1U;
+    last_rx_seq[pkt->src_id] = pkt->seq;
+
+    return 0U;
+}
+
 static void App_CheckRadioRx(void)
 {
     rf_rx_size = 0;
     memset(rf_rx_buffer, 0, sizeof(rf_rx_buffer));
+
+    App_ClearRadioSem();
 
     MX_SubGhz_Phy_ReceivePacketTimeout(20);
 
@@ -132,6 +219,7 @@ static void App_CheckRadioRx(void)
 static void App_SendInputPacket(uint8_t input_mask)
 {
     RfPacket_t pkt;
+
     memset(&pkt, 0, sizeof(pkt));
 
     pkt.magic = RF_PACKET_MAGIC;
@@ -142,34 +230,35 @@ static void App_SendInputPacket(uint8_t input_mask)
     pkt.input_mask = input_mask;
     pkt.len = 0;
 
-    MX_SubGhz_Phy_SendPacket((uint8_t *)&pkt, 7);
-
-    if (osSemaphoreAcquire(radioBinarySemHandle, 3000) == osOK)
+    if (App_SendPacketReliable(&pkt, RF_PACKET_HEADER_SIZE))
     {
-        if (MX_SubGhz_Phy_Get_SendPacket_State() == 0x01)
-        {
-            RS485_SendString("RF INPUT SENT\r\n");
-        }
-        else
-        {
-            RS485_SendString("RF INPUT SEND FAIL\r\n");
-        }
+        RS485_SendString("RF INPUT ACK OK\r\n");
     }
     else
     {
-        RS485_SendString("RF INPUT TIMEOUT\r\n");
+        RS485_SendString("RF INPUT ACK FAIL\r\n");
     }
 }
 
 static void App_SendRs485Packet(char *text)
 {
     RfPacket_t pkt;
-    uint8_t len = strlen(text);
+    size_t text_len;
+    uint8_t len;
 
-    if (len > RF_PACKET_MAX_DATA)
+    if (text == NULL)
     {
-        len = RF_PACKET_MAX_DATA;
+        return;
     }
+
+    text_len = strlen(text);
+
+    if (text_len > RF_PACKET_MAX_DATA)
+    {
+        text_len = RF_PACKET_MAX_DATA;
+    }
+
+    len = (uint8_t)text_len;
 
     memset(&pkt, 0, sizeof(pkt));
 
@@ -183,28 +272,177 @@ static void App_SendRs485Packet(char *text)
 
     memcpy(pkt.data, text, len);
 
-    MX_SubGhz_Phy_SendPacket((uint8_t *)&pkt, 7 + len);
-
-    if (osSemaphoreAcquire(radioBinarySemHandle, 3000) == osOK)
+    if (App_SendPacketReliable(&pkt, RF_PACKET_HEADER_SIZE + len))
     {
-        if (MX_SubGhz_Phy_Get_SendPacket_State() == 0x01)
-        {
-            RS485_SendString("RF DATA SENT\r\n");
-        }
-        else
-        {
-            RS485_SendString("RF DATA SEND FAIL\r\n");
-        }
+        RS485_SendString("RF DATA ACK OK\r\n");
     }
     else
     {
-        RS485_SendString("RF DATA TIMEOUT\r\n");
+        RS485_SendString("RF DATA ACK FAIL\r\n");
     }
+}
+
+static uint8_t App_SendRawPacket(RfPacket_t *pkt, uint8_t size)
+{
+    if (pkt == NULL || size == 0U)
+    {
+        return 0U;
+    }
+
+    App_ClearRadioSem();
+
+    MX_SubGhz_Phy_SendPacket((uint8_t *)pkt, size);
+
+    if (osSemaphoreAcquire(radioBinarySemHandle, RF_TX_TIMEOUT_MS) != osOK)
+    {
+        return 0U;
+    }
+
+    return (MX_SubGhz_Phy_Get_SendPacket_State() == 0x01) ? 1U : 0U;
+}
+
+static void App_SendAck(uint8_t dst_id, uint8_t ack_seq)
+{
+    RfPacket_t ack;
+
+    memset(&ack, 0, sizeof(ack));
+
+    ack.magic = RF_PACKET_MAGIC;
+    ack.src_id = g_app_config.node_id;
+    ack.dst_id = dst_id;
+    ack.type = RF_PKT_ACK;
+    ack.seq = ack_seq;
+    ack.input_mask = Input_GetMask();
+    ack.len = 0;
+
+    App_SendRawPacket(&ack, RF_PACKET_HEADER_SIZE);
+}
+
+static uint8_t App_WaitAck(uint8_t peer_id, uint8_t pkt_seq)
+{
+    uint32_t start_tick = HAL_GetTick();
+
+    while ((HAL_GetTick() - start_tick) < RF_ACK_TIMEOUT_MS)
+    {
+        rf_rx_size = 0;
+        memset(rf_rx_buffer, 0, sizeof(rf_rx_buffer));
+
+        App_ClearRadioSem();
+
+        MX_SubGhz_Phy_ReceivePacketTimeout(20);
+
+        if (osSemaphoreAcquire(radioBinarySemHandle, 50) == osOK)
+        {
+            if (MX_SubGhz_Phy_Get_RecvicePacket_State() == 0x01)
+            {
+                MX_SubGhz_Phy_Get_RecvicePacket(
+                    &rx_rssi,
+                    &rx_snr,
+                    rf_rx_buffer,
+                    &rf_rx_size
+                );
+
+                RfPacket_t *pkt = (RfPacket_t *)rf_rx_buffer;
+
+                if (RFPacket_IsValid(pkt, rf_rx_size) &&
+                    RFPacket_IsForMe(pkt, g_app_config.node_id))
+                {
+                    if (pkt->type == RF_PKT_ACK &&
+                        pkt->src_id == peer_id &&
+                        pkt->seq == pkt_seq)
+                    {
+                        return 1U;
+                    }
+
+                    /*
+                     * Nếu trong lúc chờ ACK mà nhận packet khác,
+                     * vẫn xử lý để không bị mất dữ liệu.
+                     */
+                    App_HandleReceivedPacket(pkt, rx_rssi, rx_snr);
+                }
+            }
+        }
+    }
+
+    return 0U;
+}
+
+static uint8_t App_SendPacketReliable(RfPacket_t *pkt, uint8_t size)
+{
+    if (pkt == NULL || size == 0U)
+    {
+        return 0U;
+    }
+
+    for (uint8_t retry = 0; retry < RF_RETRY_MAX; retry++)
+    {
+        if (App_SendRawPacket(pkt, size) == 0U)
+        {
+            osDelay(50);
+            continue;
+        }
+
+        /*
+         * Broadcast không nên bắt ACK,
+         * vì nhiều node ACK cùng lúc sẽ đụng nhau.
+         */
+        if (pkt->dst_id == RF_BROADCAST_ID || pkt->type == RF_PKT_ACK)
+        {
+            return 1U;
+        }
+
+        if (App_WaitAck(pkt->dst_id, pkt->seq))
+        {
+            return 1U;
+        }
+
+        /*
+         * Backoff nhẹ để tránh hai node retry cùng lúc.
+         */
+        osDelay(50 + (HAL_GetTick() & 0x3F));
+    }
+
+    return 0U;
 }
 
 static void App_HandleReceivedPacket(RfPacket_t *pkt, int16_t rssi, int8_t snr)
 {
     char msg[160];
+
+    if (pkt == NULL)
+    {
+        return;
+    }
+
+    /*
+     * Nếu nhận ACK thì không xử lý như data thường.
+     */
+    if (pkt->type == RF_PKT_ACK)
+    {
+        return;
+    }
+
+    /*
+     * Gửi ACK lại cho packet unicast.
+     * Không ACK broadcast để tránh nhiều node trả lời cùng lúc.
+     *
+     * Quan trọng:
+     * ACK phải gửi trước khi check duplicate.
+     * Vì nếu ACK cũ bị mất, TX sẽ retry packet cũ.
+     * RX phải ACK lại để TX dừng retry, nhưng không xử lý data lần 2.
+     */
+    if (pkt->dst_id != RF_BROADCAST_ID)
+    {
+        App_SendAck(pkt->src_id, pkt->seq);
+    }
+
+    /*
+     * Chống xử lý trùng packet khi TX retry.
+     */
+    if (App_IsDuplicatePacket(pkt))
+    {
+        return;
+    }
 
     if (pkt->type == RF_PKT_INPUT)
     {
@@ -230,7 +468,12 @@ static void App_HandleReceivedPacket(RfPacket_t *pkt, int16_t rssi, int8_t snr)
 
 static void App_ProcessCommand(char *cmd)
 {
-    char msg[128];
+    char msg[160];
+
+    if (cmd == NULL)
+    {
+        return;
+    }
 
     if (strcmp(cmd, "AT") == 0)
     {
@@ -242,13 +485,31 @@ static void App_ProcessCommand(char *cmd)
     }
     else if (strncmp(cmd, "AT+SETID=", 9) == 0)
     {
-        g_app_config.node_id = atoi(&cmd[9]);
-        RS485_SendString("OK SET ID\r\n");
+        uint32_t id = strtoul(&cmd[9], NULL, 10);
+
+        if (id == 0U || id >= RF_BROADCAST_ID)
+        {
+            RS485_SendString("ERR ID\r\n");
+        }
+        else
+        {
+            g_app_config.node_id = (uint8_t)id;
+            RS485_SendString("OK SET ID\r\n");
+        }
     }
     else if (strncmp(cmd, "AT+SETDST=", 10) == 0)
     {
-        g_app_config.dest_id = atoi(&cmd[10]);
-        RS485_SendString("OK SET DST\r\n");
+        uint32_t id = strtoul(&cmd[10], NULL, 10);
+
+        if (id > RF_BROADCAST_ID)
+        {
+            RS485_SendString("ERR DST\r\n");
+        }
+        else
+        {
+            g_app_config.dest_id = (uint8_t)id;
+            RS485_SendString("OK SET DST\r\n");
+        }
     }
     else if (strncmp(cmd, "AT+SETROLE=", 11) == 0)
     {
@@ -269,38 +530,98 @@ static void App_ProcessCommand(char *cmd)
     }
     else if (strncmp(cmd, "AT+SETFREQ=", 11) == 0)
     {
-        g_app_config.frequency = strtoul(&cmd[11], NULL, 10);
-        SubghzApp_ApplyConfig(&g_app_config);
-        RS485_SendString("OK SET FREQ\r\n");
+        uint32_t freq = strtoul(&cmd[11], NULL, 10);
+
+        /*
+         * Đang check theo vùng 860~930MHz.
+         * Nếu dùng 433MHz thì sửa điều kiện này.
+         */
+        if (freq < 860000000U || freq > 930000000U)
+        {
+            RS485_SendString("ERR FREQ\r\n");
+        }
+        else
+        {
+            g_app_config.frequency = freq;
+            SubghzApp_ApplyConfig(&g_app_config);
+            RS485_SendString("OK SET FREQ\r\n");
+        }
     }
     else if (strncmp(cmd, "AT+SETBW=", 9) == 0)
     {
-        g_app_config.bandwidth = atoi(&cmd[9]);
-        SubghzApp_ApplyConfig(&g_app_config);
-        RS485_SendString("OK SET BW\r\n");
+        uint32_t bw = strtoul(&cmd[9], NULL, 10);
+
+        if (bw > 2U)
+        {
+            RS485_SendString("ERR BW\r\n");
+        }
+        else
+        {
+            g_app_config.bandwidth = (uint8_t)bw;
+            SubghzApp_ApplyConfig(&g_app_config);
+            RS485_SendString("OK SET BW\r\n");
+        }
     }
     else if (strncmp(cmd, "AT+SETSF=", 9) == 0)
     {
-        g_app_config.spreading_factor = atoi(&cmd[9]);
-        SubghzApp_ApplyConfig(&g_app_config);
-        RS485_SendString("OK SET SF\r\n");
+        uint32_t sf = strtoul(&cmd[9], NULL, 10);
+
+        if (sf < 7U || sf > 12U)
+        {
+            RS485_SendString("ERR SF\r\n");
+        }
+        else
+        {
+            g_app_config.spreading_factor = (uint8_t)sf;
+            SubghzApp_ApplyConfig(&g_app_config);
+            RS485_SendString("OK SET SF\r\n");
+        }
     }
     else if (strncmp(cmd, "AT+SETCR=", 9) == 0)
     {
-        g_app_config.coding_rate = atoi(&cmd[9]);
-        SubghzApp_ApplyConfig(&g_app_config);
-        RS485_SendString("OK SET CR\r\n");
+        uint32_t cr = strtoul(&cmd[9], NULL, 10);
+
+        if (cr < 1U || cr > 4U)
+        {
+            RS485_SendString("ERR CR\r\n");
+        }
+        else
+        {
+            g_app_config.coding_rate = (uint8_t)cr;
+            SubghzApp_ApplyConfig(&g_app_config);
+            RS485_SendString("OK SET CR\r\n");
+        }
     }
     else if (strncmp(cmd, "AT+SETPWR=", 10) == 0)
     {
-        g_app_config.tx_power = atoi(&cmd[10]);
-        SubghzApp_ApplyConfig(&g_app_config);
-        RS485_SendString("OK SET POWER\r\n");
+        uint32_t pwr = strtoul(&cmd[10], NULL, 10);
+
+        if (pwr > 22U)
+        {
+            RS485_SendString("ERR POWER\r\n");
+        }
+        else
+        {
+            g_app_config.tx_power = (int8_t)pwr;
+            SubghzApp_ApplyConfig(&g_app_config);
+            RS485_SendString("OK SET POWER\r\n");
+        }
     }
     else if (strcmp(cmd, "AT+SAVE") == 0)
     {
-        AppConfig_Save();
-        RS485_SendString("OK SAVE\r\n");
+        /*
+         * Chỗ này yêu cầu AppConfig_Save() trả về HAL_StatusTypeDef.
+         * Trong app_config.h cần khai báo:
+         * HAL_StatusTypeDef AppConfig_Save(void);
+         */
+        if (AppConfig_Save() == HAL_OK)
+        {
+            RS485_SendString("OK SAVE\r\n");
+        }
+        else
+        {
+            RS485_SendString("ERR SAVE\r\n");
+        }
     }
     else if (strcmp(cmd, "AT+GETIN") == 0)
     {
@@ -330,7 +651,7 @@ static void App_PrintConfig(void)
              g_app_config.node_id,
              g_app_config.dest_id,
              g_app_config.role == DEVICE_ROLE_TX ? "TX" : "RX",
-             g_app_config.frequency,
+             (unsigned long)g_app_config.frequency,
              g_app_config.bandwidth,
              g_app_config.spreading_factor,
              g_app_config.coding_rate,

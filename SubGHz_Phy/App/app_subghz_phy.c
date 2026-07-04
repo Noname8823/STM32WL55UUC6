@@ -112,7 +112,13 @@ static void packetRecviceCallback(uint8_t state, int16_t rssi, int8_t snr,
 
 	rx_rssi = rssi;
 	rx_snr = snr;
+	if (payload_size > sizeof(rx_payload_buffer))
+	{
+	    payload_size = sizeof(rx_payload_buffer);
+	}
+
 	rx_payload_size = payload_size;
+
 	memcpy(rx_payload_buffer, payload, rx_payload_size);
 
 	osSemaphoreRelease(radioBinarySemHandle);
